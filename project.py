@@ -305,15 +305,7 @@ def validate_dataframe(df: pd.DataFrame,
     # If all validations pass, return True
     return True, "DataFrame has passed all validations."
 
-# Usage example:
-# all files  in one dataframes (folder_path = r"C:\Users\lenovo\Documents\project\lending-club-data\lending-club-data\model_authorrep"
-# csv_files = [f for f in os.listdir(folder_path) if f.endswith('.csv')]
-# dfs = []
-#
-# # Read CSV files and append dataframes to the list
-# for csv_file in csv_files:
-#     df = pd.read_csv(os.path.join(folder_path, csv_file))
-#     dfs.append(df)
+
 import os
 import pandas as pd
 folder_path =r"C:\Users\lenovo\Documents\project\lending-club-data\lending-club-data\model_authorrep"
@@ -329,56 +321,35 @@ for df in dfs:
     is_valid, message = validate_dataframe(df, n_cols=14, check_duplicates=True)
     print(is_valid, message)
 
-#Joining the dataframes
+# Concatenate all dataframes into a single dataframe
+model_authorrep= pd.concat(dfs, ignore_index=True)
+
+join_coll_config=pd.merge(model_config,model_collateral,on='id')
+#print(join_coll_config);
+
+join_coll_auth=pd.merge(model_collateral,model_authorrep,on='id')
+#print(join_coll_auth);
+
+# step 3#
+# stage 1,stage2,stage3
 
 
 import duckdb
-#collateral_authrep=duckdb.query("")
-#import pandas as pd
+cols=duckdb.query("select PD12,PDLT,EAD,LGD ,(EAD*PD12) as Stage1 ,(EAD*PDLT)as stag2 ,(EAD*LGD) as stage3 from join_coll_auth ").df()
+print(cols)
 
-# Create two example dataframes
-
-# Inner join on the 'ID' column
-join_coll_auth = model_collateral.join(model_authorrep, lsuffix='_df1', rsuffix='_df2', how='inner')
-
-# Display the result
-print(join_coll_auth)
+#part1(writing in csv)
 
 
+final_stage=pd.DataFrame(cols)
+output_excel_path=r"C:\Users\lenovo\Documents\project\step3.xlsx"
+final_stage.to_csv(output_excel_path,index=False)
 
+#Part2(writing in csv)
+data2 = duckdb.query('SELECT "Reporting Date",EAD,"Previous EAD",(EAD-"Previous EAD") as Change_EAD,(Change_EAD/"Previous EAD")*100 as Percentage FROM join_coll_auth ').df()
+print(data2)
+final_stage1=pd.DataFrame(data2)
+output_excel_path=r"C:\Users\lenovo\Documents\project\final1.xlsx"
 
-# Inner join on the 'ID' column
-join_coll_config = model_collateral.join(model_config, lsuffix='_df1', rsuffix='_df2', how='inner')
-
-# Display the result
-print(join_coll_config)
-
-
-#ECL computation:
-IFRS_Stage_1_ECL=(join_coll_auth['EAD']*join_coll_auth['PD12'])*join_coll_auth['LGD']
-print(IFRS_Stage_1_ECL)
-
-IFRS_Stage_2_ECL=(join_coll_auth['EAD']*join_coll_auth['PDLT'])*join_coll_auth['LGD']
-print(IFRS_Stage_2_ECL)
-
-IFRS_Stage_3_ECL=join_coll_auth['EAD']*join_coll_auth['LGD']
-print(IFRS_Stage_3_ECL)
-
-IFRS_Stage_4_ECL= IFRS_Stage_1_ECL+IFRS_Stage_2_ECL+IFRS_Stage_3_ECL
-print(IFRS_Stage_4_ECL)
-ad=IFRS_Stage_4_ECL,join_coll_auth['EAD'],join_coll_auth['PDLT'],join_coll_auth['PD12'],join_coll_auth['LGD']
-
-d=pd.DataFrame(ad)
-print(d)
-
-
-
-
-
-
-
-
-
-
-
+final_stage1.to_csv(output_excel_path,index=False)
 
